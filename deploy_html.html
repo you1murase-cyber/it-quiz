@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT資格クイズアプリ</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; justify-content: center; padding: 16px; }
+    #app { width: 100%; max-width: 560px; }
+    .filter-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+    .filter-group { display: flex; gap: 4px; }
+    .filter-btn { padding: 5px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #555; }
+    .filter-btn.active { background: #e6f1fb; color: #185fa5; border-color: #185fa5; }
+    .filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px; color: #666; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 6px; }
+    .badge-4 { background: #e6f1fb; color: #185fa5; }
+    .badge-ox { background: #faeeda; color: #854f0b; }
+    .question-box { background: #fff; border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; font-size: 15px; line-height: 1.7; color: #222; border: 1px solid #e0e0e0; }
+    .choice-btn { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #fff; border: 1px solid #ccc; border-radius: 10px; font-size: 15px; cursor: pointer; color: #222; transition: background 0.15s; }
+    .choice-btn:hover:not(:disabled) { background: #f0f0f0; }
+    .choice-btn.correct { background: #eaf3de; border-color: #639922; color: #27500a; }
+    .choice-btn.wrong { background: #fcebeb; border-color: #a32d2d; color: #501313; }
+    .choice-btn.dim { opacity: 0.5; }
+    .explain-toggle { font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #666; margin-bottom: 8px; }
+    .explain-box { background: #f9f9f9; border-radius: 10px; padding: 12px 16px; font-size: 14px; line-height: 1.7; color: #555; border: 1px solid #e0e0e0; margin-bottom: 12px; }
+    .next-btn { width: 100%; padding: 12px; border-radius: 10px; cursor: pointer; background: #185fa5; color: #fff; border: none; font-size: 15px; font-weight: 500; }
+    .result { text-align: center; padding: 32px 0; }
+    .result-emoji { font-size: 48px; margin-bottom: 8px; }
+    .result-pct { font-size: 28px; font-weight: 500; margin-bottom: 4px; color: #222; }
+    .result-sub { font-size: 15px; color: #666; margin-bottom: 24px; }
+    .result-msg { font-size: 14px; color: #666; padding: 10px 16px; background: #f5f5f5; border-radius: 10px; display: inline-block; margin-bottom: 24px; }
+    .retry-btn { padding: 12px 32px; border-radius: 10px; cursor: pointer; background: #185fa5; color: #fff; border: none; font-size: 15px; font-weight: 500; }
+    .correct-mark { margin-left: 8px; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const questions = [
+  { id:1, type:"4択", category:"ITパスポート", topic:"ストラテジ系", question:"企業の情報セキュリティポリシーを策定する際、最初に作成するべき文書はどれか？", choices:["情報セキュリティ基本方針","情報セキュリティ対策基準","情報セキュリティ実施手順","情報セキュリティインシデント対応計画"], answer:0, explanation:"情報セキュリティ基本方針（ポリシー）は最上位文書で、組織の姿勢と目標を示す。その下に対策基準・実施手順と階層構造になる。" },
+  { id:2, type:"4択", category:"ITパスポート", topic:"ストラテジ系", question:"バランス・スコアカード（BSC）の4つの視点として正しい組み合わせはどれか。", choices:["財務・顧客・業務プロセス・学習と成長","財務・顧客・品質・生産性","収益・コスト・品質・スピード","売上・利益・市場・人材"], answer:0, explanation:"BSCはKaplanとNortonが提唱。財務・顧客・内部業務プロセス・学習と成長の4視点でバランスよく評価する。" },
+  { id:3, type:"○×", category:"ITパスポート", topic:"ストラテジ系", question:"SWOT分析の「T」は「Technology（技術）」を表す。", choices:["○（正しい）","×（誤り）"], answer:1, explanation:"SWOTのTはThreat（脅威）。外部環境のマイナス要因を指す。Technologyではない。" },
+  { id:4, type:"4択", category:"ITパスポート", topic:"ストラテジ系", question:"プロダクトライフサイクルの段階を順番に並べたものはどれか。", choices:["導入期→成長期→成熟期→衰退期","成長期→導入期→成熟期→衰退期","導入期→成熟期→成長期→衰退期","成長期→成熟期→導入期→衰退期"], answer:0, explanation:"製品は導入→成長→成熟→衰退の順にライフサイクルをたどる。" },
+  { id:5, type:"○×", category:"ITパスポート", topic:"ストラテジ系", question:"ROIとは投資に対する利益の割合を示す指標である。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"ROI（Return On Investment）＝（利益÷投資額）×100。投資効率を測る代表的な指標。" },
+  { id:6, type:"4択", category:"ITパスポート", topic:"マネジメント系", question:"プロジェクトのスコープ管理において、承認された作業範囲外の作業が追加されることを何というか？", choices:["スコープクリープ","ゴールドプレーティング","リスクアペタイト","コンティンジェンシー"], answer:0, explanation:"スコープクリープは正式な変更管理手続きを経ずに作業範囲が拡大すること。" },
+  { id:7, type:"○×", category:"ITパスポート", topic:"マネジメント系", question:"ガントチャートは、作業の依存関係（前後関係）を明示的に表現できる。", choices:["○（正しい）","×（誤り）"], answer:1, explanation:"ガントチャートは開始・終了時期を示す棒グラフ。依存関係の明示にはアローダイアグラム（PERT）を使う。" },
+  { id:8, type:"4択", category:"ITパスポート", topic:"マネジメント系", question:"ITサービスマネジメントの国際規格はどれか。", choices:["ISO/IEC 20000","ISO 9001","ISO 14001","ISO/IEC 27001"], answer:0, explanation:"ISO/IEC 20000はITサービスマネジメントの国際規格。ITILと整合性が高い。" },
+  { id:9, type:"○×", category:"ITパスポート", topic:"マネジメント系", question:"SLAとは、サービス提供者と利用者の間で合意したサービスレベルを定めた契約である。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"SLA（Service Level Agreement）はサービスの品質・可用性・応答時間などを定めた合意文書。" },
+  { id:10, type:"4択", category:"ITパスポート", topic:"マネジメント系", question:"システム開発においてウォーターフォールモデルの特徴として正しいのはどれか。", choices:["各工程を順序通りに進め、原則として前工程に戻らない","短いサイクルで開発・テストを繰り返す","要件定義とテストを同時並行で行う","プロトタイプを繰り返し改善する"], answer:0, explanation:"ウォーターフォールは要件定義→設計→実装→テストを順に進める手法。" },
+  { id:11, type:"○×", category:"ITパスポート", topic:"テクノロジ系", question:"CPUのクロック周波数が高いほど、必ず処理速度が速くなる。", choices:["○（正しい）","×（誤り）"], answer:1, explanation:"クロック周波数は高いほど速い傾向があるが、コア数・アーキテクチャ・キャッシュにも依存するため「必ず」とはいえない。" },
+  { id:12, type:"4択", category:"ITパスポート", topic:"テクノロジ系", question:"SQLのSELECT文でWHERE句を省略したとき、どうなるか。", choices:["テーブル内の全レコードが取得される","エラーが発生する","先頭1件のみ取得される","空のデータが返る"], answer:0, explanation:"WHERE句は絞り込み条件。省略すると条件なし＝全レコードが対象になる。" },
+  { id:13, type:"○×", category:"ITパスポート", topic:"テクノロジ系", question:"フラッシュメモリは電源を切るとデータが消えるRAMの一種である。", choices:["○（正しい）","×（誤り）"], answer:1, explanation:"フラッシュメモリは不揮発性メモリ（ROMの一種）。電源を切ってもデータは保持される。" },
+  { id:14, type:"4択", category:"ITパスポート", topic:"テクノロジ系", question:"10進数の「13」を2進数に変換すると何になるか。", choices:["1101","1011","1110","1001"], answer:0, explanation:"13＝8+4+1＝2³+2²+2⁰。2進数で1101。" },
+  { id:15, type:"○×", category:"ITパスポート", topic:"テクノロジ系", question:"AIにおける「機械学習」とは、プログラムが大量のデータからパターンを学習する技術である。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"機械学習はデータからルールやパターンを自動的に学習するAIの手法。" },
+  { id:16, type:"4択", category:"ITパスポート", topic:"テクノロジ系", question:"OSI参照モデルの第3層はどれか。", choices:["ネットワーク層","トランスポート層","データリンク層","セッション層"], answer:0, explanation:"OSI参照モデルの第3層はネットワーク層。IPアドレスによるアドレッシングとルーティングを担当する。" },
+  { id:17, type:"○×", category:"ITパスポート", topic:"テクノロジ系", question:"クラウドコンピューティングのSaaSとは、インターネット経由でソフトウェアを利用するサービスである。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"SaaS（Software as a Service）はソフトウェアをサービスとして提供。GmailやMicrosoft 365が代表例。" },
+  { id:18, type:"4択", category:"ITパスポート", topic:"テクノロジ系", question:"IoTの説明として最も適切なものはどれか。", choices:["様々なモノをインターネットに接続し、相互に通信させる仕組み","人工知能が自律的に判断・行動する技術","大量のデータを高速処理するコンピューティング技術","仮想空間と現実空間を融合させる技術"], answer:0, explanation:"IoT（Internet of Things）はセンサー・家電・機械などをインターネットに接続してデータを収集・活用する仕組み。" },
+  { id:19, type:"4択", category:"基本情報技術者", topic:"アルゴリズム", question:"2分探索法でn個のデータから目的のデータを探すとき、比較回数の最大値はどれか。", choices:["log₂n","n","n²","n/2"], answer:0, explanation:"2分探索はデータを半分ずつ絞り込むため最大log₂n回。n=1024なら最大10回。" },
+  { id:20, type:"○×", category:"基本情報技術者", topic:"アルゴリズム", question:"バブルソートの最悪時間計算量はO(n²)である。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"バブルソートは隣接要素を比較・交換する単純な整列法。最悪・平均ともO(n²)。" },
+  { id:21, type:"4択", category:"基本情報技術者", topic:"アルゴリズム", question:"スタック（Stack）の操作として正しい説明はどれか。", choices:["後に入れたデータを先に取り出す（LIFO）","先に入れたデータを先に取り出す（FIFO）","任意の位置のデータを直接取り出せる","データを木構造で管理する"], answer:0, explanation:"スタックはLIFO（Last In First Out）構造。push（積む）とpop（取り出す）で操作する。" },
+  { id:22, type:"○×", category:"基本情報技術者", topic:"アルゴリズム", question:"再帰アルゴリズムとは、関数が自分自身を呼び出す処理のことである。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"再帰（recursion）は関数が自己呼び出しを行う手法。終了条件（基底ケース）が必要。" },
+  { id:23, type:"4択", category:"基本情報技術者", topic:"アルゴリズム", question:"クイックソートの平均時間計算量はどれか。", choices:["O(n log n)","O(n)","O(n²)","O(log n)"], answer:0, explanation:"クイックソートの平均計算量はO(n log n)。ピボットの選び方が悪いと最悪O(n²)になる。" },
+  { id:24, type:"○×", category:"基本情報技術者", topic:"ネットワーク", question:"IPアドレス「192.168.1.1」はプライベートIPアドレスである。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"192.168.0.0〜192.168.255.255はRFC1918で定めたプライベートIP範囲。" },
+  { id:25, type:"4択", category:"基本情報技術者", topic:"ネットワーク", question:"HTTPSで使われる暗号化プロトコルはどれか。", choices:["TLS","SSH","IPsec","PGP"], answer:0, explanation:"HTTPSはHTTPをTLS（Transport Layer Security）で暗号化したもの。" },
+  { id:26, type:"○×", category:"基本情報技術者", topic:"ネットワーク", question:"MACアドレスはネットワーク機器の製造時に割り当てられる物理アドレスである。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"MACアドレスはNICに固有の48ビットの物理アドレス。データリンク層で使われる。" },
+  { id:27, type:"4択", category:"基本情報技術者", topic:"ネットワーク", question:"DNSの役割として正しいのはどれか。", choices:["ドメイン名をIPアドレスに変換する","IPアドレスをMACアドレスに変換する","データを暗号化して送信する","ネットワーク機器にIPアドレスを自動付与する"], answer:0, explanation:"DNS（Domain Name System）はドメイン名をIPアドレスに変換する名前解決の仕組み。" },
+  { id:28, type:"○×", category:"基本情報技術者", topic:"ネットワーク", question:"TCPはUDPと比較して、信頼性は高いが通信速度は遅い傾向がある。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"TCPは確認応答・再送制御などで信頼性を確保。その分オーバーヘッドがありUDPより遅い傾向がある。" },
+  { id:29, type:"4択", category:"基本情報技術者", topic:"セキュリティ", question:"公開鍵暗号方式において、送信者がメッセージを暗号化するために使用する鍵はどれか。", choices:["受信者の公開鍵","受信者の秘密鍵","送信者の公開鍵","送信者の秘密鍵"], answer:0, explanation:"公開鍵暗号では「受信者の公開鍵」で暗号化し、「受信者の秘密鍵」で復号する。" },
+  { id:30, type:"○×", category:"基本情報技術者", topic:"セキュリティ", question:"SQLインジェクションとは、Webフォームなどに不正なSQLを入力してデータベースを不正操作する攻撃である。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"SQLインジェクションは入力値にSQL文を混入させる攻撃。プレースホルダの使用で防止できる。" },
+  { id:31, type:"4択", category:"基本情報技術者", topic:"セキュリティ", question:"フィッシング攻撃の説明として正しいのはどれか。", choices:["偽のWebサイトや電子メールで個人情報を詐取する","パスワードを総当たりで試みる","他人のIDでシステムに不正ログインする","通信を傍受して内容を盗み見る"], answer:0, explanation:"フィッシング（Phishing）は金融機関等に偽装したメール・サイトでパスワード等を騙し取る攻撃。" },
+  { id:32, type:"○×", category:"基本情報技術者", topic:"セキュリティ", question:"デジタル署名は送信者の秘密鍵で署名し、受信者が送信者の公開鍵で検証する。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"送信者の秘密鍵で署名生成、受信者が送信者の公開鍵で検証。なりすまし防止と改ざん検出に使う。" },
+  { id:33, type:"4択", category:"基本情報技術者", topic:"セキュリティ", question:"不正アクセスを監視し、検知したらアラートを発するシステムはどれか。", choices:["IDS","IPS","WAF","DMZ"], answer:0, explanation:"IDS（Intrusion Detection System）は侵入検知システム。IDSは検知のみ、IPSは遮断まで行う。" },
+  { id:34, type:"○×", category:"基本情報技術者", topic:"データベース", question:"関係データベースにおいて、一つのテーブルに複数の主キーを設定することができる。", choices:["○（正しい）","×（誤り）"], answer:1, explanation:"主キーは1テーブルに1つだけ。複数列で構成する複合主キーは可能だが、主キー自体は1つ。" },
+  { id:35, type:"4択", category:"基本情報技術者", topic:"データベース", question:"データベースのACID特性に含まれないものはどれか。", choices:["可用性（Availability）","原子性（Atomicity）","一貫性（Consistency）","永続性（Durability）"], answer:0, explanation:"ACIDは原子性・一貫性・独立性・永続性の4つ。可用性（Availability）はCAP定理の概念。" },
+  { id:36, type:"○×", category:"基本情報技術者", topic:"データベース", question:"正規化の目的の一つは、データの冗長性を排除して更新時の不整合を防ぐことである。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"正規化はデータの重複を排除し、更新・削除・挿入時の異常（アノマリー）を防ぐ。" },
+  { id:37, type:"4択", category:"基本情報技術者", topic:"データベース", question:"SQLでテーブルから重複行を除いてデータを取得するキーワードはどれか。", choices:["DISTINCT","UNIQUE","EXCEPT","HAVING"], answer:0, explanation:"SELECT DISTINCT カラム名 FROM テーブル名 で重複を除いた一意の値を取得できる。" },
+  { id:38, type:"4択", category:"基本情報技術者", topic:"ハードウェア", question:"CPUのキャッシュメモリの目的として正しいのはどれか。", choices:["主記憶へのアクセス頻度を減らし処理を高速化する","データを永続的に保存する","ネットワーク通信を高速化する","GPU処理を補助する"], answer:0, explanation:"キャッシュメモリはCPUと主記憶の速度差を埋める高速小容量メモリ。" },
+  { id:39, type:"○×", category:"基本情報技術者", topic:"ハードウェア", question:"SSDはHDDに比べて、一般的にアクセス速度が速く、物理的な衝撃に強い。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"SSDはフラッシュメモリを使うため可動部品がなく、HDDより高速かつ衝撃に強い。" },
+  { id:40, type:"4択", category:"基本情報技術者", topic:"ハードウェア", question:"32ビットOSで扱えるメモリの上限として正しいのはどれか。", choices:["4GB","2GB","8GB","16GB"], answer:0, explanation:"32ビットアドレス空間は2³²＝約42億アドレス＝4GB。" },
+  { id:41, type:"4択", category:"基本情報技術者", topic:"プログラミング", question:"オブジェクト指向の三大要素として正しい組み合わせはどれか。", choices:["カプセル化・継承・ポリモーフィズム","抽象化・正規化・モジュール化","クラス・メソッド・変数","インスタンス・コンストラクタ・デストラクタ"], answer:0, explanation:"OOPの三大要素はカプセル化・継承・ポリモーフィズム（多態性）。" },
+  { id:42, type:"○×", category:"基本情報技術者", topic:"プログラミング", question:"コンパイラはソースコードを1行ずつ解釈しながら実行する。", choices:["○（正しい）","×（誤り）"], answer:1, explanation:"コンパイラはソース全体を機械語に変換してから実行する。1行ずつ実行するのはインタプリタ。" },
+  { id:43, type:"4択", category:"基本情報技術者", topic:"プログラミング", question:"プログラムのバグを取り除く作業を何というか？", choices:["デバッグ","コンパイル","リファクタリング","テスト"], answer:0, explanation:"デバッグ（debug）はプログラムのバグを発見・修正する作業。" },
+  { id:44, type:"4択", category:"基本情報技術者", topic:"システム開発", question:"テストの種類のうち、システム全体として要件を満たすか確認するテストはどれか。", choices:["システムテスト","単体テスト","結合テスト","受入テスト"], answer:0, explanation:"システムテストはシステム全体を対象に機能・性能・セキュリティ要件を検証する。" },
+  { id:45, type:"○×", category:"基本情報技術者", topic:"システム開発", question:"アジャイル開発では、短い反復サイクル（スプリント）で開発を進め、変化する要件に柔軟に対応する。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"アジャイルは2〜4週間のスプリントで動くソフトウェアを継続的にリリースする手法。" },
+  { id:46, type:"4択", category:"基本情報技術者", topic:"システム開発", question:"ブラックボックステストの説明として正しいのはどれか。", choices:["内部構造を考慮せず、入出力の仕様に基づきテストする","プログラムの内部ロジックを検証する","コードのカバレッジを測定する","バグの再現手順を記録する"], answer:0, explanation:"ブラックボックステストは内部実装を見ずに仕様（入力→期待出力）でテストする手法。" },
+  { id:47, type:"4択", category:"基本情報技術者", topic:"コンピュータ科学基礎", question:"16進数の「1F」を10進数に変換すると何になるか。", choices:["31","30","32","29"], answer:0, explanation:"1F₁₆ ＝ 1×16¹ + 15×16⁰ ＝ 16+15 ＝ 31。" },
+  { id:48, type:"○×", category:"基本情報技術者", topic:"コンピュータ科学基礎", question:"補数表現では、負の数を表現するために使われる。", choices:["○（正しい）","×（誤り）"], answer:0, explanation:"2の補数表現はコンピュータで負の整数を表す標準的な方法。" },
+  { id:49, type:"4択", category:"基本情報技術者", topic:"コンピュータ科学基礎", question:"仮想記憶の説明として正しいのはどれか。", choices:["補助記憶装置を主記憶の延長として使い、実際より広いアドレス空間を提供する","CPUの処理速度を仮想的に高速化する","複数のOSを同時に動かす技術","ネットワーク上のストレージを利用する技術"], answer:0, explanation:"仮想記憶はHDDやSSDを主記憶の延長として使い、物理メモリより大きなアドレス空間を提供する。" },
+  { id:50, type:"4択", category:"基本情報技術者", topic:"コンピュータ科学基礎", question:"マルチスレッドの説明として正しいのはどれか。", choices:["1つのプログラム内で複数の処理を並行して実行する","複数のCPUに処理を分散させる","複数のコンピュータで処理を分担する","プログラムを複数のファイルに分割する"], answer:0, explanation:"マルチスレッドは1プロセス内の複数スレッドを並行実行する技術。" },
+];
+
+const CATEGORIES = ["すべて","ITパスポート","基本情報技術者"];
+const TYPES = ["すべて","4択","○×"];
+
+let filterCat = "すべて", filterType = "すべて";
+let pool = [], idx = 0, selected = null, answered = false, showExp = false;
+let stats = { correct: 0, total: 0 };
+let finished = false;
+
+function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+function buildPool() {
+  pool = shuffle(questions.filter(q =>
+    (filterCat === "すべて" || q.category === filterCat) &&
+    (filterType === "すべて" || q.type === filterType)
+  ));
+  idx = 0; selected = null; answered = false; showExp = false;
+  stats = { correct: 0, total: 0 }; finished = false;
+  render();
+}
+
+function render() {
+  const app = document.getElementById("app");
+  const pct = stats.total > 0 ? Math.round(stats.correct / stats.total * 100) : 0;
+  const cur = pool[idx];
+
+  let html = `<div style="padding-top:16px">`;
+
+  // filters
+  html += `<div class="filters">`;
+  html += `<div><div class="filter-label">資格</div><div class="filter-group">`;
+  CATEGORIES.forEach(c => { html += `<button class="filter-btn${filterCat===c?' active':''}" onclick="setFilter('cat','${c}')">${c}</button>`; });
+  html += `</div></div>`;
+  html += `<div><div class="filter-label">形式</div><div class="filter-group">`;
+  TYPES.forEach(t => { html += `<button class="filter-btn${filterType===t?' active':''}" onclick="setFilter('type','${t}')">${t}</button>`; });
+  html += `</div></div></div>`;
+
+  if (!finished && cur) {
+    html += `<div class="meta">
+      <span>${idx+1} / ${pool.length}問　｜　<span style="color:#639922;font-weight:500">${stats.correct}正解</span>${stats.total>0?` （正答率 ${pct}%）`:''}</span>
+      <span class="badge ${cur.type==='○×'?'badge-ox':'badge-4'}">${cur.type}　${cur.topic}</span>
+    </div>`;
+    html += `<div class="question-box">${cur.question}</div>`;
+    cur.choices.forEach((c, i) => {
+      let cls = "choice-btn";
+      if (answered) {
+        if (i === cur.answer) cls += " correct";
+        else if (i === selected) cls += " wrong";
+        else cls += " dim";
+      }
+      const mark = answered && i === cur.answer ? ' ✓' : (answered && i === selected && i !== cur.answer ? ' ✗' : '');
+      const prefix = cur.type === "4択" ? `<strong>${['A','B','C','D'][i]}. </strong>` : '';
+      html += `<button class="${cls}" onclick="selectAnswer(${i})" ${answered?'disabled':''}>${prefix}${c}${mark}</button>`;
+    });
+    if (answered) {
+      html += `<button class="explain-toggle" onclick="toggleExp()">${showExp?'解説を閉じる':'解説を見る'}</button>`;
+      if (showExp) html += `<div class="explain-box">${cur.explanation}</div>`;
+      html += `<button class="next-btn" onclick="nextQ()">${idx+1<pool.length?'次の問題へ →':'結果を見る'}</button>`;
+    }
+  } else if (finished) {
+    const emoji = pct>=80?'🎉':pct>=60?'👍':'📚';
+    const msg = pct>=80?'素晴らしい！この調子で続けましょう。':pct>=60?'あと少し！苦手な問題を復習しましょう。':'基礎から丁寧に見直してみましょう。';
+    html += `<div class="result">
+      <div class="result-emoji">${emoji}</div>
+      <div class="result-pct">${pct}%</div>
+      <div class="result-sub">${pool.length}問中 ${stats.correct}問正解</div>
+      <div class="result-msg">${msg}</div><br>
+      <button class="retry-btn" onclick="buildPool()">もう一度挑戦する</button>
+    </div>`;
+  } else {
+    html += `<p style="color:#888;padding:24px 0">該当する問題がありません。</p>`;
+  }
+
+  html += `</div>`;
+  app.innerHTML = html;
+}
+
+function setFilter(key, val) {
+  if (key === 'cat') filterCat = val;
+  else filterType = val;
+  buildPool();
+}
+
+function selectAnswer(i) {
+  if (answered) return;
+  selected = i; answered = true;
+  if (i === pool[idx].answer) stats.correct++;
+  stats.total++;
+  render();
+}
+
+function toggleExp() { showExp = !showExp; render(); }
+
+function nextQ() {
+  if (idx + 1 >= pool.length) { finished = true; render(); return; }
+  idx++; selected = null; answered = false; showExp = false;
+  render();
+}
+
+buildPool();
+</script>
+</body>
+</html>
